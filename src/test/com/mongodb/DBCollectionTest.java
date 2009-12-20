@@ -16,13 +16,15 @@
 
 package com.mongodb;
 
-import java.util.*;
-import java.util.regex.*;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 
 import org.testng.annotations.Test;
 
-import com.mongodb.util.*;
+import com.mongodb.util.TestCase;
 
 public class DBCollectionTest extends TestCase {
 
@@ -32,6 +34,42 @@ public class DBCollectionTest extends TestCase {
         _db = new Mongo( "127.0.0.1" ).getDB( "cursortest" );
     }
 
+    /**
+     * Test inserting a large collection that requires multiple
+     * buffers
+     */
+    @Test(groups = {"basic"})
+    public void testInsertLargeCollection()
+    {
+    	DBCollection c = _db.getCollection("test");
+        c.drop();
+        
+        String objectString = "abcdefghijklmnopqrstuvwxyz123456";
+        objectString += objectString + objectString + objectString + objectString;
+        
+        List<DBObject> dbObjects = new ArrayList<DBObject>();
+        
+        for(int x = 0; x < ((Bytes.MAX_OBJECT_SIZE + 10) / objectString.length()); x++)
+        {
+        	dbObjects.add(BasicDBObjectBuilder.start().add("x", objectString).add("_id", x).get());
+        }
+        
+        c.insert(dbObjects);
+
+        c = _db.getCollection("test");
+        
+        List<DBObject> found = c.find().toArray(); 
+        
+        assertEquals(found.size(), dbObjects.size());
+        
+        for(DBObject o : found)
+        {
+        	dbObjects.remove(o);
+        }
+        
+        assertEquals(0, dbObjects.size());
+    }
+    
     @Test(groups = {"basic"})
     public void testFindOne() {
         DBCollection c = _db.getCollection("test");

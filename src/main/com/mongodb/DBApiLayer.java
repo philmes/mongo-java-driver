@@ -187,8 +187,32 @@ public class DBApiLayer extends DB {
             encoder._buf.putInt( 0 ); // reserved
             encoder._put( _fullNameSpace );
 
+            
             for (DBObject o : arr) {
-                encoder.putObject( o );
+            	try
+            	{
+            		encoder.putObject( o );	
+            	}
+                catch(BufferOverflowException e)
+                {
+                	try 
+                	{
+                		encoder.flip();
+                        doInsert( encoder._buf , getWriteConcern() );
+                        encoder.done();
+                        encoder = ByteEncoder.get();
+                                                
+                        encoder._buf.putInt( 0 ); // reserved
+                        encoder._put( _fullNameSpace );
+                        encoder.putObject(o);
+                    }
+                	catch(RuntimeException et)
+                	{
+                		encoder.done();
+                		
+                		throw et;
+                	}
+                }
             }
             encoder.flip();
 

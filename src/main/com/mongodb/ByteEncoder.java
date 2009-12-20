@@ -92,6 +92,25 @@ public class ByteEncoder extends Bytes {
         return _pool.get();
     }
 
+    /**
+     * Get the current position of this ByteEncoder
+     * @return
+     */
+    public long getPosition()
+    {
+    	return _buf.position();
+    }
+    
+    /**
+     * Get the remaining capacity of this ByteEncoder
+     * 
+     * @return
+     */
+    public long getRemaining()
+    {
+    	return _buf.remaining();
+    }
+    
     /** Resets and returns this encoder to the pool.
      */
     protected void done(){
@@ -163,16 +182,28 @@ public class ByteEncoder extends Bytes {
     
     /** Encodes a <code>DBObject</code>.
      * This is for the higher level api calls
+     * 
+     * If encoding an object fails, the buffer will
+     * be reset to the position prior to this put call
+     * and a BufferOverflowException will be thrown 
+     * 
      * @param o the object to encode
      * @return the number of characters in the encoding
      */
     public int putObject( DBObject o ){
+    	
+    	_buf.mark();
+    	
         try {
-            return putObject( null , o );
+        	return putObject( null , o );
         }
         catch ( BufferOverflowException bof ){
-            reset();
-            throw new IllegalArgumentException( "tried to save too large of an object.  max size : " + ( _buf.capacity() / 2  ) );
+            //reset to marked offset and wipe any written data
+        	_buf.reset();
+        	_buf.put(new byte[_buf.remaining()]);
+        	_buf.reset();
+        	
+        	throw new BufferOverflowException();
         }
     }
 
@@ -563,4 +594,5 @@ public class ByteEncoder extends Bytes {
     
     private boolean _flipped = false;
     final ByteBuffer _buf;
+    
 }

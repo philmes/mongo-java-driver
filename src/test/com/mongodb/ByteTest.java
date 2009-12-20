@@ -19,7 +19,10 @@ package com.mongodb;
 import java.util.*;
 import java.util.regex.*;
 import java.io.IOException;
+import java.nio.BufferOverflowException;
 
+import org.testng.Assert;
+import org.testng.annotations.ExpectedExceptions;
 import org.testng.annotations.Test;
 
 import com.mongodb.util.*;
@@ -214,6 +217,33 @@ public class ByteTest extends TestCase {
         decoder.done();
     }
 
+    @Test
+    public void testEncodeOverflow()
+    {
+    	ByteEncoder encoder = ByteEncoder.get();
+    	
+    	DBObject dbo = BasicDBObjectBuilder.start().add("foo", "asdasdasdasdasdasdasdasdasdasdasdasdasdasdasdasdasdasdasdasdasdasdasdasdasdasdasdasdasdasdasdasdasdasdasdasd").get();
+    	
+    	long lastOffset = 0;
+    	
+    	try
+    	{
+    		for(long x = 0; x < 1000000000; x++)
+    		{
+    			lastOffset = encoder.getPosition();
+    			encoder.putObject(dbo);
+    		}
+    	}
+    	catch(BufferOverflowException e)
+    	{
+    		assertEquals(lastOffset, encoder.getPosition());
+    		
+    		return;
+    	}
+    	
+    	Assert.fail("BufferOverflowExceptiion not encountered");
+    }
+    
     @Test(groups = {"basic"})
     public void testEncodeDecode() {
         ArrayList t = new ArrayList();
